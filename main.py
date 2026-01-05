@@ -346,6 +346,17 @@ def did_you_know():
     finally:
         db.close()
 
+
+ # =====================================================
+        # to not let it sleep
+        # =====================================================#
+
+ @app.get("/health")
+     def health():
+     return {"status": "ok"}
+
+
+
 # @app.get("/did-you-know")
 # def did_you_know():
 #     db = SessionLocal()
@@ -458,6 +469,7 @@ def did_you_know():
 #
 #     finally:
 #         db.close()
+
 
 
 
