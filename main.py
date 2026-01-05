@@ -351,9 +351,10 @@ def did_you_know():
         # to not let it sleep
         # =====================================================#
 
- @app.get("/health")
-     def health():
-     return {"status": "ok"}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
 
 
 
@@ -469,6 +470,7 @@ def did_you_know():
 #
 #     finally:
 #         db.close()
+
 
 
 
