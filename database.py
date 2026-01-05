@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from models import Base
 
 # Read from environment variable (REQUIRED for deployment)
-DATABASE_URL = os.getenv("postgresql://postgres:q-LN5VfKQmP?ka2@db.isfdhktoalmzbbtjfvil.supabase.co:5432/postgres")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
@@ -23,3 +23,4 @@ SessionLocal = sessionmaker(
 
 # Create tables only once (safe for Supabase)
 Base.metadata.create_all(bind=engine)
+
