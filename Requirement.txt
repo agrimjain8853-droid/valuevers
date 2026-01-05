@@ -1,5 +1,6 @@
 fastapi
 uvicorn
-sqlalchemy
 jinja2
+sqlalchemy
+psycopg2-binary
 python-multipart
