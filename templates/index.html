@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fair Value Engine</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <!-- SNAPSHOT -->
+    <div class="snapshot">
+        <div class="snapshot-card">
+            <div class="snapshot-title">🔥 Trending</div>
+            <div class="snapshot-main" id="snap-trending">—</div>
+            <div class="snapshot-sub" id="snap-trending-price">—</div>
+        </div>
+        <div class="snapshot-card">
+            <div class="snapshot-title">📊 Sample Size</div>
+            <div class="snapshot-main" id="snap-sample">—</div>
+            <div class="snapshot-sub">estimates</div>
+        </div>
+        <div class="snapshot-card">
+            <div class="snapshot-title">🧠 Confidence</div>
+            <div class="snapshot-main" id="snap-confidence">—</div>
+            <div class="snapshot-sub">crowd signal</div>
+        </div>
+        <div class="snapshot-card">
+            <div class="snapshot-title">⏱ Updated</div>
+            <div class="snapshot-main" id="snap-updated">—</div>
+            <div class="snapshot-sub">latest</div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+
+        <!-- LEFT -->
+        <div class="left-panel">
+
+            <div class="container">
+                <h2>Fair Value Engine</h2>
+
+                <!-- SEARCH -->
+                <form id="searchForm">
+                    <label>Search Fair Value</label>
+                    <input type="text" name="item_id" required>
+                    <button type="submit">Search</button>
+                </form>
+
+                <div id="searchResultText"></div>
+
+                <!-- SUBMIT -->
+                <form action="/submit" method="post">
+                    <label>Product</label>
+                    <input type="text" name="item_id" required>
+
+                    <label>Your Price Estimate</label>
+                    <div class="price-row">
+                        <input type="number" name="price_value" step="0.01" required>
+                        <select name="price_unit" required>
+                            <option value="1">Units</option>
+                            <option value="1e3">Thousand</option>
+                            <option value="1e5">Lakh</option>
+                            <option value="1e6">Million</option>
+                            <option value="1e7">Crore</option>
+                        </select>
+                    </div>
+
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
+
+            <!-- TREND -->
+            <div class="container">
+                <h3>Fair Value Trend</h3>
+                <canvas id="trendChart"></canvas>
+            </div>
+
+        </div>
+
+        <!-- RIGHT -->
+        <div class="right-panel">
+            <div class="featured-card">
+                <div class="featured-header">🔥 Trending Fair Prices</div>
+                <div id="featured-content">Loading…</div>
+            </div>
+
+            <!-- DID YOU KNOW -->
+           <div class="container did-you-know">
+               <div class="dyk-title">💡 Did you know?</div>
+               <div class="dyk-text" id="dyk-text">
+                 Loading insight…
+               </div>
+           </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- QUIRKY POPUP -->
+<div id="quirky-popup" class="quirky-popup quirky-hidden">
+    <div class="quirky-header">
+        🤔 Quick price question
+        <span class="quirky-close" onclick="hideQuirky()">×</span>
+    </div>
+
+    <div class="quirky-body">
+        <img id="quirky-image" class="quirky-image">
+        <div id="quirky-question" class="quirky-question"></div>
+
+        <form id="quirky-form">
+            <div class="price-row">
+                <input type="number" id="quirky-price" step="0.01" required>
+                <select id="quirky-unit">
+                    <option value="1">Units</option>
+                    <option value="1e3">Thousand</option>
+                    <option value="1e5">Lakh</option>
+                    <option value="1e6">Million</option>
+                    <option value="1e7">Crore</option>
+                </select>
+            </div>
+            <button type="submit">Submit guess</button>
+        </form>
+
+        <div class="quirky-hint">
+            No right answer — intuition only 😉
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+/* FEATURED + SNAPSHOT */
+async function loadFeatured() {
+    const res = await fetch("/featured-prices");
+    const data = await res.json();
+    if (!Array.isArray(data) || !data.length) return;
+
+    document.getElementById("featured-content").innerHTML = data.map(d => `
+        <div class="featured-item">
+            <div class="product-name">${d.item_id}</div>
+            <div class="fair-price">₹${Math.round(d.fair_value).toLocaleString()}</div>
+            <div class="meta">${d.data_points} estimates · ${d.date}</div>
+            <div class="crowd-badge">Crowd powered</div>
+        </div>
+    `).join("");
+
+    const top = data[0];
+    document.getElementById("snap-trending").innerText = top.item_id;
+    document.getElementById("snap-trending-price").innerText =
+        "₹" + Math.round(top.fair_value).toLocaleString();
+    document.getElementById("snap-sample").innerText = top.data_points;
+    document.getElementById("snap-confidence").innerText =
+        top.data_points >= 10 ? "HIGH" : top.data_points >= 5 ? "MEDIUM" : "LOW";
+    document.getElementById("snap-updated").innerText = top.date;
+}
+loadFeatured();
+
+/* SEARCH + TREND */
+let chart = null;
+
+async function loadSearchResult(item_id) {
+    const box = document.getElementById("searchResultText");
+    box.innerText = "Loading...";
+
+    const res = await fetch(`/api/fair-value/${item_id}`);
+    const data = await res.json();
+
+    if (data.error) {
+        box.innerText = data.error;
+        return;
+    }
+
+    box.innerHTML = `
+        <div class="result">
+            <h3>Fair Value for "${item_id}"</h3>
+            <ul>
+                <li>Fair Value: ${data.fair_value}</li>
+                <li>Median: ${data.median}</li>
+                <li>Trimmed Mean: ${data.trimmed_mean}</li>
+                <li>Data Points: ${data.data_points_used}</li>
+            </ul>
+        </div>
+    `;
+
+    loadChart(item_id);
+}
+
+async function loadChart(item_id) {
+    const res = await fetch(`/chart-data/${item_id}`);
+    const data = await res.json();
+    if (!data.timestamps || !data.timestamps.length) return;
+
+    const ctx = document.getElementById("trendChart").getContext("2d");
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: data.timestamps,
+            datasets: [{
+                label: "Fair Value",
+                data: data.fair_value,
+                borderColor: "#2563eb",
+                tension: 0.3
+            }]
+        }
+    });
+}
+
+document.getElementById("searchForm").addEventListener("submit", e => {
+    e.preventDefault();
+    loadSearchResult(e.target.item_id.value.trim().toLowerCase());
+});
+
+/* QUIRKY POPUP */
+const quirkyItems = [
+    { name: "Eiffel Tower", image: "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg" },
+    { name: "Taj Mahal", image: "https://upload.wikimedia.org/wikipedia/commons/d/da/Taj-Mahal.jpg" },
+    { name: "Mona Lisa", image: "https://upload.wikimedia.org/wikipedia/commons/6/6a/Mona_Lisa.jpg" },
+    { name: "Hope Diamond", image: "https://upload.wikimedia.org/wikipedia/commons/3/3d/Hope_Diamond_%28Smithsonian%29.jpg" }
+];
+
+let currentQuirky = null;
+
+function showQuirky() {
+    currentQuirky = quirkyItems[Math.floor(Math.random() * quirkyItems.length)];
+    document.getElementById("quirky-question").innerText =
+        `What’s the fair price of ${currentQuirky.name}?`;
+    document.getElementById("quirky-image").src = currentQuirky.image;
+    document.getElementById("quirky-popup").classList.remove("quirky-hidden");
+}
+
+function hideQuirky() {
+    document.getElementById("quirky-popup").classList.add("quirky-hidden");
+}
+
+document.getElementById("quirky-form").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    await fetch("/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+            item_id: currentQuirky.name.toLowerCase().replace(/\s+/g, "_"),
+            price_value: document.getElementById("quirky-price").value,
+            price_unit: document.getElementById("quirky-unit").value
+        })
+    });
+
+    hideQuirky();
+    document.getElementById("quirky-price").value = "";
+});
+
+setTimeout(showQuirky, 15000);
+</script>
+
+<script>
+/* =========================
+   DID YOU KNOW – OVERTAKE
+========================= */
+async function loadDidYouKnow() {
+    try {
+        const res = await fetch("/did-you-know");
+        const data = await res.json();
+
+        if (!data || !data.text) return;
+
+        document.getElementById("dyk-text").innerText = data.text;
+
+    } catch (err) {
+        console.error("Did You Know failed:", err);
+    }
+}
+
+// load once + refresh every 30s
+loadDidYouKnow();
+setInterval(loadDidYouKnow, 30000);
+</script>
+
+
+</body>
+</html>
