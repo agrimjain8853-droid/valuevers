@@ -1,9 +1,7 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from models import Base
 
-# Read from environment variable (REQUIRED for deployment)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
@@ -11,8 +9,7 @@ if not DATABASE_URL:
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    connect_args={"sslmode": "require"}
+    pool_pre_ping=True
 )
 
 SessionLocal = sessionmaker(
@@ -20,7 +17,3 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
-
-# Create tables only once (safe for Supabase)
-Base.metadata.create_all(bind=engine)
-
