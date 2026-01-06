@@ -9,7 +9,17 @@ if not DATABASE_URL:
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True
+
+    # 🔴 CRITICAL: fail fast instead of hanging
+    connect_args={
+        "connect_timeout": 5
+    },
+
+    # 🔴 Detect dead / stale connections
+    pool_pre_ping=True,
+
+    # 🔴 Recycle idle connections (important for Supabase pooler)
+    pool_recycle=300,
 )
 
 SessionLocal = sessionmaker(
