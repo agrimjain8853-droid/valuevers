@@ -351,9 +351,12 @@ def did_you_know():
         # to not let it sleep
         # =====================================================#
 
-@app.get("/health")
-def health():
+from fastapi import Response
+
+@app.api_route("/health", methods=["GET", "HEAD"])
+def health(response: Response):
     return {"status": "ok"}
+
 
 
 
@@ -470,6 +473,7 @@ def health():
 #
 #     finally:
 #         db.close()
+
 
 
 
