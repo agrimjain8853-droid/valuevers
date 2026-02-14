@@ -291,3 +291,122 @@ canvas {
     color: #1f2937;
     line-height: 1.5;
 }
+
+/* =========================
+   Valuation glossary button
+   ========================= */
+
+/* =========================
+   FORCE valuation card look
+   ========================= */
+
+a.valuation-button,
+a.valuation-button:link,
+a.valuation-button:visited,
+a.valuation-button:hover,
+a.valuation-button:active {
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+.valuation-card {
+  padding: 14px 16px;
+}
+
+.valuation-header {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.valuation-body {
+  font-size: 14px;
+  color: #4b5563; /* neutral text, not link-blue */
+  line-height: 1.4;
+}
+
+.valuation-button {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.valuation-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.12);
+}
+
+.valuation-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.valuation-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 45px rgba(0,0,0,0.15);
+}
+
+/* FLipkart and Amazon Search
+
+.market-search {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.market-search button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.market-search button:nth-child(2) {
+    background: linear-gradient(135deg, #2563eb, #06b6d4);
+}
+
+.market-search button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+}
+
+
+/* =========================
+   Search + Market Layout
+========================= */
+
+.market-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.market-links {
+    display: flex;
+    gap: 10px;
+}
+
+.market-links button {
+    flex: 1;
+}
+
+/* Make the SERP button feel premium */
+.market-main {
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+
+/* Make search visually primary */
+.search-btn {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+}
