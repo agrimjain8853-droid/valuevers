@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Valuation Glossary – ValueVers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: radial-gradient(circle at top, #eef2ff, #f8fafc);
+  overflow-x: hidden;
+}
+
+h1 {
+  text-align: center;
+  margin: 40px 0 10px;
+  font-size: 36px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #475569;
+  margin-bottom: 40px;
+}
+
+.back-home {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+  color: #1e293b;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+.glossary-grid {
+  max-width: 1200px;
+  margin: auto;
+  padding: 0 24px 80px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.jelly-card {
+  position: relative;
+  padding: 22px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  animation: jellyIn 0.9s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+
+.jelly-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: linear-gradient(120deg,#6366f1,#22d3ee,#a78bfa);
+  opacity: 0.12;
+  animation: gradientMove 6s ease infinite;
+}
+
+.jelly-card:hover {
+  transform: scale(1.04) translateY(-6px);
+}
+
+.jelly-content {
+  position: relative;
+  z-index: 1;
+}
+
+.term {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.definition {
+  font-size: 14px;
+  color: #334155;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.55);
+  backdrop-filter: blur(6px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-card {
+  width: min(720px, 90%);
+  background: linear-gradient(135deg,#ffffff,#f8fafc);
+  border-radius: 28px;
+  padding: 32px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.35);
+  animation: popUp 0.5s cubic-bezier(.34,1.56,.64,1);
+}
+
+.modal-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.modal-body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.modal-close {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  font-size: 22px;
+  cursor: pointer;
+  color: #64748b;
+}
+
+@keyframes jellyIn {
+  0% { opacity:0; transform:scale(0.7); }
+  60% { opacity:1; transform:scale(1.08); }
+  100% { opacity:1; transform:scale(1); }
+}
+
+@keyframes popUp {
+  0% { transform:scale(0.6); opacity:0; }
+  100% { transform:scale(1); opacity:1; }
+}
+
+@keyframes gradientMove {
+  0% { filter:hue-rotate(0deg); }
+  50% { filter:hue-rotate(90deg); }
+  100% { filter:hue-rotate(0deg); }
+}
+</style>
+</head>
+
+<body>
+
+<a href="/" class="back-home">← Back</a>
+
+<h1>Valuation Glossary</h1>
+<div class="subtitle">Click a concept to explore it in depth</div>
+
+<div class="glossary-grid" id="grid"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-card">
+    <div class="modal-close" onclick="closeModal()">✕</div>
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+let content = {};
+
+fetch("/static/input.json")
+  .then(r => r.json())
+  .then(data => {
+    content = data;
+    const grid = document.getElementById("grid");
+
+    data.forEach((item, i) => {
+      const card = document.createElement("div");
+      card.className = "jelly-card";
+      card.style.animationDelay = `${i * 0.08}s`;
+      card.onclick = () => openModal(item.term);
+
+      card.innerHTML = `
+        <div class="jelly-content">
+          <div class="term">${item.term}</div>
+          <div class="definition">${item.short}</div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  });
+
+function openModal(key) {
+  const item = content.find(x => x.term === key);
+  document.getElementById("modal-title").innerText = item.term;
+  document.getElementById("modal-body").innerHTML = item.body;
+  document.getElementById("modal").classList.add("active");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("active");
+}
+
+document.getElementById("modal").addEventListener("click", e => {
+  if (e.target.id === "modal") closeModal();
+});
+</script>
+
+</body>
+</html>
