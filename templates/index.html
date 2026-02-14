@@ -41,12 +41,30 @@
             <div class="container">
                 <h2>Fair Value Engine</h2>
 
-                <!-- SEARCH -->
                 <form id="searchForm">
                     <label>Search Fair Value</label>
                     <input type="text" name="item_id" required>
-                    <button type="submit">Search</button>
+
+                    <div class="market-layout">
+
+                        <button type="submit" class="search-btn">
+                            🔍 Search
+                        </button>
+
+                        <button type="button" class="market-main" onclick="loadMarketPrices()">
+                            🛒 Check Market Prices
+                        </button>
+
+                        <div class="market-links">
+                            <button type="button" onclick="searchAmazon()">🔎 Amazon</button>
+                            <button type="button" onclick="searchFlipkart()">🔎 Flipkart</button>
+                        </div>
+
+                        <div id="marketResults" class="market-results"></div>
+
+                    </div>
                 </form>
+
 
                 <div id="searchResultText"></div>
 
@@ -93,10 +111,18 @@
                  Loading insight…
                </div>
            </div>
-        </div>
+           <!-- VALUATION GLOSSARY CARD -->
+           <a href="/valuation-glossary" class="container valuation-card valuation-button">
+               <div class="valuation-header">
+                   📘 New to valuation?
+               </div>
+               <div class="valuation-body">
+                   Learn common valuation terms explained simply.
+               </div>
+           </a>
 
-    </div>
-</div>
+            </div>
+        </div>
 
 <!-- QUIRKY POPUP -->
 <div id="quirky-popup" class="quirky-popup quirky-hidden">
@@ -215,22 +241,41 @@ document.getElementById("searchForm").addEventListener("submit", e => {
     loadSearchResult(e.target.item_id.value.trim().toLowerCase());
 });
 
-/* QUIRKY POPUP */
-const quirkyItems = [
-    { name: "Eiffel Tower", image: "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg" },
-    { name: "Taj Mahal", image: "https://upload.wikimedia.org/wikipedia/commons/d/da/Taj-Mahal.jpg" },
-    { name: "Mona Lisa", image: "https://upload.wikimedia.org/wikipedia/commons/6/6a/Mona_Lisa.jpg" },
-    { name: "Hope Diamond", image: "https://upload.wikimedia.org/wikipedia/commons/3/3d/Hope_Diamond_%28Smithsonian%29.jpg" }
-];
+/* QUIRKY POPUP – Wikipedia powered */
 
 let currentQuirky = null;
 
-function showQuirky() {
-    currentQuirky = quirkyItems[Math.floor(Math.random() * quirkyItems.length)];
-    document.getElementById("quirky-question").innerText =
-        `What’s the fair price of ${currentQuirky.name}?`;
-    document.getElementById("quirky-image").src = currentQuirky.image;
-    document.getElementById("quirky-popup").classList.remove("quirky-hidden");
+// Fetch a random famous thing from Wikipedia
+async function getRandomFamous() {
+    const res = await fetch("https://en.wikipedia.org/api/rest_v1/page/random/summary");
+    const data = await res.json();
+
+    return {
+        name: data.title,
+        image: data.thumbnail ? data.thumbnail.source : "",
+        description: data.extract || ""
+    };
+}
+
+async function showQuirky() {
+    try {
+        currentQuirky = await getRandomFamous();
+
+        document.getElementById("quirky-question").innerText =
+            `What’s the fair price of ${currentQuirky.name}?`;
+
+        if (currentQuirky.image) {
+            document.getElementById("quirky-image").src = currentQuirky.image;
+            document.getElementById("quirky-image").style.display = "block";
+        } else {
+            document.getElementById("quirky-image").style.display = "none";
+        }
+
+        document.getElementById("quirky-popup").classList.remove("quirky-hidden");
+
+    } catch (err) {
+        console.error("Wikipedia fetch failed", err);
+    }
 }
 
 function hideQuirky() {
@@ -254,6 +299,7 @@ document.getElementById("quirky-form").addEventListener("submit", async e => {
     document.getElementById("quirky-price").value = "";
 });
 
+// Show popup after 15 seconds
 setTimeout(showQuirky, 15000);
 </script>
 
@@ -279,6 +325,88 @@ async function loadDidYouKnow() {
 loadDidYouKnow();
 setInterval(loadDidYouKnow, 30000);
 </script>
+
+<!--- FLipkart Amazon Prices -->
+
+<script>
+function getSearchTerm() {
+    const input = document.querySelector('#searchForm input[name="item_id"]');
+    return input.value.trim().replace(/\s+/g, "+");
+}
+
+function searchAmazon() {
+    const q = getSearchTerm();
+    if (!q) return alert("Enter a product name first");
+    window.open(`https://www.amazon.in/s?k=${q}`, "_blank");
+}
+
+function searchFlipkart() {
+    const q = getSearchTerm();
+    if (!q) return alert("Enter a product name first");
+    window.open(`https://www.flipkart.com/search?q=${q}`, "_blank");
+}
+</script>
+
+
+<!--Serp API FLipkart Amazon -->
+
+<script>
+async function loadMarketPrices() {
+    const input = document.querySelector('#searchForm input[name="item_id"]');
+
+    if (!input || !input.value.trim()) {
+        alert("Enter a product name first");
+        return;
+    }
+
+    const q = input.value.trim();
+
+    const resultsBox = document.getElementById("marketResults");
+    resultsBox.innerHTML = "Loading market prices…";
+
+    try {
+        const res = await fetch(`/api/market-prices?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        let html = "<h3>🛒 Market Prices</h3>";
+        let found = false;
+
+        if (data.amazon && data.amazon.price) {
+            found = true;
+            html += `
+                <div class="market-row">
+                    <strong>Amazon</strong>:
+                    ₹${data.amazon.price.toLocaleString()}
+                    ${data.amazon.url ? `<a href="${data.amazon.url}" target="_blank">Buy</a>` : ""}
+                </div>
+            `;
+        }
+
+        if (data.flipkart && data.flipkart.price) {
+            found = true;
+            html += `
+                <div class="market-row">
+                    <strong>Flipkart</strong>:
+                    ₹${data.flipkart.price.toLocaleString()}
+                    ${data.flipkart.url ? `<a href="${data.flipkart.url}" target="_blank">Buy</a>` : ""}
+                </div>
+            `;
+        }
+
+        if (!found) {
+            html += "<div>No listings found.</div>";
+        }
+
+        resultsBox.innerHTML = html;
+
+    } catch (err) {
+        resultsBox.innerHTML = "Market lookup failed.";
+        console.error(err);
+    }
+}
+
+</script>
+
 
 
 </body>
