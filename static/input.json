@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "fair-value",
+    "term": "Fair Value",
+    "short": "The price where collective judgment converges",
+    "body": "Fair Value represents the price at which most people agree an asset is worth. It is calculated by aggregating many independent price estimates and removing extreme outliers so that only the core consensus remains. Over time, fair value stabilizes as more participants contribute."
+  },
+  {
+    "slug": "market-price",
+    "term": "Market Price",
+    "short": "The current transaction price in the market",
+    "body": "Market Price is the price at which an asset is currently being bought and sold. It may differ from fair value due to hype, panic, scarcity, promotions, or short-term supply and demand imbalances."
+  },
+  {
+    "slug": "intrinsic-value",
+    "term": "Intrinsic Value",
+    "short": "Value derived from fundamentals rather than opinion",
+    "body": "Intrinsic Value is calculated based on expected future benefits such as cash flows, usefulness, or economic impact. It is often used by analysts to estimate what something should be worth regardless of market mood."
+  },
+  {
+    "slug": "confidence-score",
+    "term": "Confidence Score",
+    "short": "How reliable a valuation signal is",
+    "body": "Confidence Score reflects how tightly user estimates cluster together. A high score means many people independently arrived at similar values. A low score means estimates are scattered, indicating uncertainty."
+  },
+  {
+    "slug": "median-price",
+    "term": "Median Price",
+    "short": "The middle value of all estimates",
+    "body": "The median price is the middle number when all price estimates are sorted from lowest to highest. It is resistant to extreme outliers and is often a more reliable indicator than a simple average."
+  },
+  {
+    "slug": "trimmed-mean",
+    "term": "Trimmed Mean",
+    "short": "The average after removing extreme values",
+    "body": "The trimmed mean removes the highest and lowest estimates before calculating the average. This prevents a few unrealistic guesses from distorting the crowd’s true opinion."
+  },
+  {
+    "slug": "crowd-valuation",
+    "term": "Crowd Valuation",
+    "short": "Value estimated by many independent users",
+    "body": "Crowd valuation leverages the wisdom of many independent participants. When many people estimate the same item, their combined judgment is often more accurate than any single expert."
+  },
+  {
+    "slug": "price-discovery",
+    "term": "Price Discovery",
+    "short": "How markets determine the right price",
+    "body": "Price discovery is the process through which buyers and sellers collectively determine what something is worth. On ValueVers, price discovery happens through user submissions rather than transactions."
+  }
+]
