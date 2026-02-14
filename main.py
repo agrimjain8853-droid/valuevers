@@ -264,10 +264,11 @@ def valuation_glossary(request: Request):
 
 # Serp API --------------
 
-SERPAPI_KEY = os.getenv("SERPAPI_KEY")
-
 @app.get("/api/market-prices")
+
 def market_prices(q: str):
+    SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+    
     if not SERPAPI_KEY:
         return {"error": "SERPAPI_KEY not configured"}
 
@@ -314,3 +315,4 @@ def market_prices(q: str):
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health(response: Response):
     return {"status": "ok"}
+
