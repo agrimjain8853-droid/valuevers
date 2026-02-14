@@ -1,3 +1,5 @@
+import os
+import requests
 from fastapi import FastAPI, HTTPException, Form, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -251,6 +253,60 @@ def did_you_know():
     finally:
         db.close()
 
+
+@app.get("/valuation-glossary", response_class=HTMLResponse)
+def valuation_glossary(request: Request):
+    return templates.TemplateResponse(
+        "valuation_glossary.html",
+        {"request": request}
+    )
+
+
+# Serp API --------------
+
+SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+
+@app.get("/api/market-prices")
+def market_prices(q: str):
+    if not SERPAPI_KEY:
+        return {"error": "SERPAPI_KEY not configured"}
+
+    params = {
+        "engine": "google_shopping",
+        "q": q,
+        "gl": "in",
+        "hl": "en",
+        "api_key": SERPAPI_KEY
+    }
+
+    try:
+        r = requests.get("https://serpapi.com/search", params=params, timeout=10)
+        data = r.json()
+    except Exception:
+        return {"error": "SERP API unreachable"}
+
+    amazon = None
+    flipkart = None
+
+    for item in data.get("shopping_results", []):
+        source = (item.get("source") or "").lower()
+        price = item.get("extracted_price")
+        link = item.get("link")
+        title = item.get("title")
+
+        if not price:
+            continue
+
+        if "amazon" in source and not amazon:
+            amazon = {"price": price, "title": title, "url": link}
+
+        if "flipkart" in source and not flipkart:
+            flipkart = {"price": price, "title": title, "url": link}
+
+    return {
+        "amazon": amazon,
+        "flipkart": flipkart
+    }
 
 # ----------------------------
 # HEALTH (KEEP ALIVE)
