@@ -24,3 +24,15 @@ class FairValueHistory(Base):
     data_points_used = Column(Integer, nullable=False)
     confidence = Column(String, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class ActivityRecord(Base):
+    __tablename__ = "activity_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    activity = Column(String, index=True, nullable=False)
+    activity_date = Column(String, index=True, nullable=False)
+    proof_image_url = Column(String, nullable=True)
+    invigilator_score = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
