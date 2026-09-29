@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, UniqueConstraint
 from sqlalchemy.orm import declarative_base
 from datetime import datetime
 
 Base = declarative_base()
+
 
 class PriceEstimate(Base):
     __tablename__ = "price_estimates"
@@ -35,4 +36,12 @@ class ActivityRecord(Base):
     proof_image_url = Column(String, nullable=True)
     invigilator_score = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "activity",
+            "activity_date",
+            name="uq_activity_date"
+        ),
+    )
