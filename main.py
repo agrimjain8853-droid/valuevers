@@ -1,4 +1,7 @@
 import os
+import uuid
+from pathlib import Path
+from datetime import date, timedelta
 import requests
 from fastapi import FastAPI, HTTPException, Form, Request, Response, UploadFile, File
 from fastapi.responses import HTMLResponse
@@ -13,9 +16,6 @@ from sqlalchemy import func
 from database import SessionLocal
 from models import PriceEstimate, FairValueHistory, ActivityRecord
 from pricing import fair_value
-from datetime import date, timedelta
-from pathlib import Path
-import uuid
 
 
 app = FastAPI(title="Fair Value Engine")
@@ -312,124 +312,203 @@ def market_prices(q: str):
         "flipkart": flipkart
     }
 
+
+
 # ----------------------------
 # ACTIVITY TRACKER
 # ----------------------------
 ACTIVITIES = ["Gym", "Eating", "Utensils", "Grooming"]
-PROOF_DIR = Path("static/activity_proofs")
-PROOF_DIR.mkdir(parents=True, exist_ok=True)
-
-@app.get("/activity-tracker", response_class=HTMLResponse)
-def activity_tracker_page(request: Request):
-    return templates.TemplateResponse("activity_tracker.html", {"request": request})
+ACTIVITY_UPLOAD_DIR = Path("static/activity_proofs")
+ACTIVITY_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _ensure_activity_table(db):
-    ActivityRecord.__table__.create(bind=db.get_bind(), checkfirst=True)
-
-
-def _tracker_dates():
-    # Seven-day rolling window ending today.
+def tracker_dates():
+    """Return the previous 6 days plus today, oldest -> newest."""
     today = date.today()
     return [(today - timedelta(days=i)).isoformat() for i in range(6, -1, -1)]
 
 
+@app.get("/activity-tracker", response_class=HTMLResponse)
+def activity_tracker(request: Request):
+    return templates.TemplateResponse(
+        "activity_tracker.html",
+        {"request": request}
+    )
+
+
 @app.get("/api/activity-tracker")
-def activity_tracker_data():
-    db = SessionLocal()
+def get_activity_tracker():
+    """
+    Returns the seven-day window immediately.
+    Database records are added when the activity table is available.
+    """
+    dates = tracker_dates()
+    records = {}
+
+    db = None
     try:
-        _ensure_activity_table(db)
-        dates = _tracker_dates()
-        rows = db.query(ActivityRecord).filter(ActivityRecord.activity_date.in_(dates)).all()
-        records = {}
+        db = SessionLocal()
+        rows = (
+            db.query(ActivityRecord)
+            .filter(ActivityRecord.activity_date.in_(dates))
+            .all()
+        )
+
         for row in rows:
             records[f"{row.activity}|{row.activity_date}"] = {
-                "activity": row.activity,
-                "date": row.activity_date,
                 "proof_image_url": row.proof_image_url,
                 "score": row.invigilator_score,
             }
-        return {"dates": dates, "activities": ACTIVITIES, "records": records}
+
+        return {
+            "dates": dates,
+            "activities": ACTIVITIES,
+            "records": records,
+        }
+
+    except Exception:
+        # The calendar itself must never get stuck because of a database issue.
+        return {
+            "dates": dates,
+            "activities": ACTIVITIES,
+            "records": {},
+            "database_warning": "Activity records are temporarily unavailable."
+        }
+
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 @app.post("/api/activity-tracker/proof")
 async def upload_activity_proof(
     activity: str = Form(...),
     activity_date: str = Form(...),
-    proof: UploadFile = File(...),
+    proof: UploadFile = File(...)
 ):
     if activity not in ACTIVITIES:
-        raise HTTPException(status_code=400, detail="Invalid activity")
+        raise HTTPException(status_code=400, detail="Invalid activity.")
+
     try:
-        selected_date = date.fromisoformat(activity_date)
+        requested_date = date.fromisoformat(activity_date)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date")
-    if selected_date not in [date.fromisoformat(d) for d in _tracker_dates()]:
-        raise HTTPException(status_code=400, detail="Date is outside the current 7-day window")
+        raise HTTPException(status_code=400, detail="Invalid date.")
+
+    if activity_date not in tracker_dates():
+        raise HTTPException(status_code=400, detail="Date is outside the current 7-day window.")
+
     if not proof.content_type or not proof.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Please upload an image")
+        raise HTTPException(status_code=400, detail="Please upload an image.")
 
-    content = await proof.read()
-    if len(content) > 8 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Image must be 8 MB or smaller")
+    # 8 MB limit
+    contents = await proof.read()
+    if len(contents) > 8 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image must be 8 MB or smaller.")
 
-    suffix = Path(proof.filename or "proof.jpg").suffix.lower() or ".jpg"
-    if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
-        suffix = ".jpg"
-    filename = f"{activity.lower()}_{activity_date}_{uuid.uuid4().hex}{suffix}"
-    target = PROOF_DIR / filename
-    target.write_bytes(content)
+    extension = Path(proof.filename or "").suffix.lower()
+    allowed_extensions = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    if extension not in allowed_extensions:
+        extension = ".jpg"
+
+    filename = f"{requested_date.isoformat()}_{activity.lower()}_{uuid.uuid4().hex}{extension}"
+    destination = ACTIVITY_UPLOAD_DIR / filename
+    destination.write_bytes(contents)
 
     db = SessionLocal()
     try:
-        _ensure_activity_table(db)
-        row = db.query(ActivityRecord).filter(
-            ActivityRecord.activity == activity,
-            ActivityRecord.activity_date == activity_date
-        ).first()
-        if row is None:
-            row = ActivityRecord(activity=activity, activity_date=activity_date)
-            db.add(row)
-        elif row.proof_image_url:
-            old_path = Path(row.proof_image_url.lstrip("/"))
-            if old_path.exists():
-                old_path.unlink(missing_ok=True)
+        row = (
+            db.query(ActivityRecord)
+            .filter(
+                ActivityRecord.activity == activity,
+                ActivityRecord.activity_date == activity_date
+            )
+            .first()
+        )
 
-        row.proof_image_url = f"/static/activity_proofs/{filename}"
+        if row is None:
+            row = ActivityRecord(
+                activity=activity,
+                activity_date=activity_date,
+                proof_image_url=f"/static/activity_proofs/{filename}"
+            )
+            db.add(row)
+        else:
+            row.proof_image_url = f"/static/activity_proofs/{filename}"
+
         db.commit()
-        return {"success": True, "proof_image_url": row.proof_image_url}
+
+        return {
+            "success": True,
+            "proof_image_url": row.proof_image_url
+        }
+
+    except Exception:
+        db.rollback()
+        # The image exists locally, but the record could not be saved.
+        # Return a clear error instead of silently pretending it worked.
+        try:
+            destination.unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=503,
+            detail="Proof could not be saved. Make sure the activity_records table exists in the database."
+        )
     finally:
         db.close()
 
 
 @app.post("/api/activity-tracker/score")
-def save_activity_score(activity: str = Form(...), activity_date: str = Form(...), score: int = Form(...)):
+def save_activity_score(
+    activity: str = Form(...),
+    activity_date: str = Form(...),
+    score: int = Form(...)
+):
     if activity not in ACTIVITIES:
-        raise HTTPException(status_code=400, detail="Invalid activity")
+        raise HTTPException(status_code=400, detail="Invalid activity.")
+
+    if activity_date not in tracker_dates():
+        raise HTTPException(status_code=400, detail="Date is outside the current 7-day window.")
+
     if score < 0 or score > 10:
-        raise HTTPException(status_code=400, detail="Score must be between 0 and 10")
-    try:
-        selected_date = date.fromisoformat(activity_date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date")
-    if selected_date not in [date.fromisoformat(d) for d in _tracker_dates()]:
-        raise HTTPException(status_code=400, detail="Date is outside the current 7-day window")
+        raise HTTPException(status_code=400, detail="Score must be between 0 and 10.")
 
     db = SessionLocal()
     try:
-        _ensure_activity_table(db)
-        row = db.query(ActivityRecord).filter(
-            ActivityRecord.activity == activity,
-            ActivityRecord.activity_date == activity_date
-        ).first()
+        row = (
+            db.query(ActivityRecord)
+            .filter(
+                ActivityRecord.activity == activity,
+                ActivityRecord.activity_date == activity_date
+            )
+            .first()
+        )
+
         if row is None:
-            row = ActivityRecord(activity=activity, activity_date=activity_date)
+            row = ActivityRecord(
+                activity=activity,
+                activity_date=activity_date,
+                invigilator_score=score
+            )
             db.add(row)
-        row.invigilator_score = score
+        else:
+            row.invigilator_score = score
+
         db.commit()
-        return {"success": True, "score": score}
+
+        return {
+            "success": True,
+            "activity": activity,
+            "activity_date": activity_date,
+            "score": score
+        }
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Mark could not be saved. Make sure the activity_records table exists in the database."
+        )
     finally:
         db.close()
 
