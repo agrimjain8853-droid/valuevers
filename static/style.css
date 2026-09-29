@@ -410,3 +410,13 @@ a.valuation-button:active {
 .search-btn {
     background: linear-gradient(135deg, #2563eb, #1e40af);
 }
+
+
+.activity-link-card {
+    margin-top: 0;
+    background: linear-gradient(135deg, #ffffff, #f5f3ff);
+}
+
+.activity-link-card:hover {
+    transform: translateY(-3px);
+}
